@@ -1,0 +1,50 @@
+import assert from 'node:assert/strict';
+import { Writable } from 'node:stream';
+import { parseYouTubeUrl } from '../lib/youtube.js';
+import { json3ToParagraphs, pickTrack } from '../lib/captions.js';
+import { splitIntoParagraphs } from '../lib/whisper.js';
+import { buildPdf, safeFilename } from '../lib/pdf.js';
+
+// URL
+assert.equal(parseYouTubeUrl('https://youtu.be/dQw4w9WgXcQ?t=10').id, 'dQw4w9WgXcQ');
+assert.equal(parseYouTubeUrl('youtube.com/watch?v=dQw4w9WgXcQ&list=x').id, 'dQw4w9WgXcQ');
+assert.equal(parseYouTubeUrl('https://www.youtube.com/shorts/dQw4w9WgXcQ').id, 'dQw4w9WgXcQ');
+for (const bad of ['', 'bonjour', 'https://vimeo.com/123', 'https://www.youtube.com/watch?v=court', 'https://www.youtube.com/']) {
+  assert.throws(() => parseYouTubeUrl(bad), (e) => Boolean(e.code && e.message), `devrait refuser : ${bad}`);
+}
+
+// Sous-titres json3
+const data = { events: [
+  { tStartMs: 0, dDurationMs: 2000, segs: [{ utf8: 'Bonjour à tous,' }] },
+  { tStartMs: 2000, dDurationMs: 2000, segs: [{ utf8: 'bienvenue.' }] },
+  { tStartMs: 12000, dDurationMs: 2000, segs: [{ utf8: 'Deuxième partie.' }] },
+  { tStartMs: 1, segs: undefined },
+] };
+assert.deepEqual(json3ToParagraphs(data), ['Bonjour à tous, bienvenue.', 'Deuxième partie.']);
+
+// Choix de piste
+const mk = (ext = 'json3') => [{ ext, url: 'https://x/' + ext }];
+assert.equal(pickTrack({ language: 'fr', subtitles: { fr: mk() }, automatic_captions: { 'fr-orig': mk() } }).kind, 'manual');
+assert.equal(pickTrack({ language: 'fr', subtitles: {}, automatic_captions: { 'fr-orig': mk(), en: mk() } }).kind, 'auto');
+assert.equal(pickTrack({ subtitles: {}, automatic_captions: {} }), null);
+
+// Découpage
+assert.ok(splitIntoParagraphs('Une phrase. '.repeat(200)).length > 1);
+
+// PDF
+const chunks = [];
+const sink = new Writable({ write(c, _e, cb) { chunks.push(c); cb(); } });
+await new Promise((resolve) => {
+  sink.on('finish', resolve);
+  buildPdf(sink, {
+    title: 'Éléments de test : « accents » et œuvres',
+    channel: 'Chaîne', url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', kind: 'auto',
+    paragraphs: Array.from({ length: 60 }, (_, i) => `Paragraphe ${i + 1}. ` + 'Texte de démonstration avec accents éàù. '.repeat(15)),
+  });
+});
+const pdf = Buffer.concat(chunks);
+assert.equal(pdf.subarray(0, 5).toString(), '%PDF-');
+assert.ok(pdf.length > 5000);
+assert.equal(safeFilename('Éléments : test / 1'), 'Elements-test-1.pdf');
+
+console.log('Tous les tests passent. PDF de test :', pdf.length, 'octets');

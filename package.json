@@ -1,0 +1,16 @@
+{
+  "name": "yt-transcript-pdf",
+  "version": "1.0.0",
+  "description": "Colle l'URL d'une vidéo YouTube, obtiens la transcription et télécharge-la en PDF.",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node test/smoke.js"
+  },
+  "engines": { "node": ">=20" },
+  "dependencies": {
+    "express": "^4.21.2",
+    "pdfkit": "^0.15.2"
+  }
+}

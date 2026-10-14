@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Transcription YouTube en PDF</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --paper: #E8EDF1;
+  --sheet: #F8FAFB;
+  --ink: #14202B;
+  --muted: #566775;
+  --line: #C5D0D9;
+  --mark: #F4D738;
+  --mark-ink: #14202B;
+  --teal: #2E5E63;
+  --danger: #A8321C;
+  --danger-bg: #F6DDD6;
+  --ui: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --read: "Source Serif 4", Georgia, "Times New Roman", serif;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #0F1A22; --sheet: #17242E; --ink: #E6EDF2; --muted: #94A5B3;
+    --line: #2B3D4A; --mark: #F4D738; --mark-ink: #14202B; --teal: #7FB8BD;
+    --danger: #F2A592; --danger-bg: #3A2019; color-scheme: dark;
+  }
+}
+* { box-sizing: border-box; }
+html { height: 100%; }
+body {
+  margin: 0; min-height: 100%; background: var(--paper); color: var(--ink);
+  font-family: var(--ui); font-size: 1rem; line-height: 1.55;
+}
+main { max-width: 46rem; margin: 0 auto; padding: clamp(2rem, 8vw, 5rem) 1.25rem 4rem; }
+h1 {
+  font-family: var(--read); font-weight: 600; font-size: clamp(2rem, 6vw, 3.1rem);
+  line-height: 1.08; letter-spacing: -0.015em; margin: 0 0 0.6rem;
+}
+.lede { color: var(--muted); margin: 0 0 2.2rem; max-width: 36rem; }
+
+form { display: flex; flex-direction: column; gap: 0.75rem; }
+.field {
+  display: flex; flex-wrap: wrap; gap: 0.6rem; align-items: stretch;
+}
+label { font-weight: 500; font-size: 0.95rem; }
+input[type="url"], input[type="text"] {
+  flex: 1 1 16rem; min-width: 0; font: inherit; color: var(--ink);
+  background: var(--sheet); border: 1.5px solid var(--line); border-radius: 6px;
+  padding: 0.85rem 1rem;
+}
+input::placeholder { color: var(--muted); opacity: .8; }
+input:focus-visible, button:focus-visible {
+  outline: 3px solid var(--teal); outline-offset: 2px;
+}
+button {
+  font: inherit; font-weight: 600; cursor: pointer; border-radius: 6px;
+  padding: 0.85rem 1.3rem; border: 1.5px solid transparent;
+}
+.primary { background: var(--mark); color: var(--mark-ink); }
+.primary:hover:not(:disabled) { filter: brightness(0.96); }
+.primary:disabled { opacity: .6; cursor: progress; }
+.secondary { background: transparent; color: var(--ink); border-color: var(--line); }
+.secondary:hover { border-color: var(--ink); }
+
+.status { min-height: 1.5rem; margin-top: 1.4rem; }
+.progress { color: var(--muted); }
+.bar {
+  height: 6px; width: 100%; max-width: 20rem; margin-top: 0.7rem; border-radius: 3px;
+  background: var(--line); overflow: hidden; position: relative;
+}
+.bar::after {
+  content: ""; position: absolute; inset: 0; width: 40%; background: var(--mark);
+  animation: sweep 1.3s ease-in-out infinite;
+}
+@keyframes sweep { from { transform: translateX(-100%); } to { transform: translateX(260%); } }
+@media (prefers-reduced-motion: reduce) { .bar::after { animation: none; width: 100%; opacity: .6; } }
+
+.error {
+  background: var(--danger-bg); color: var(--danger); border-radius: 6px;
+  padding: 0.9rem 1.1rem; font-weight: 500;
+}
+
+.result { margin-top: 2.5rem; }
+.meta h2 { font-family: var(--read); font-size: 1.5rem; line-height: 1.25; margin: 0 0 0.35rem; font-weight: 600; }
+.meta p { margin: 0; color: var(--muted); font-size: 0.92rem; }
+.actions { display: flex; flex-wrap: wrap; gap: 0.6rem; margin: 1.2rem 0 1.4rem; }
+.sheet {
+  background: var(--sheet); border: 1px solid var(--line); border-radius: 6px;
+  padding: clamp(1.2rem, 4vw, 2.2rem); max-height: 70vh; overflow-y: auto;
+}
+.sheet p {
+  font-family: var(--read); font-size: 1.1rem; line-height: 1.72;
+  margin: 0 0 1.1em; max-width: 38rem;
+}
+.sheet p:last-child { margin-bottom: 0; }
+[hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Colle une vidéo YouTube, récupère son texte.</h1>
+  <p class="lede">L'outil lit les sous-titres de la vidéo. S'il n'y en a pas, il transcrit l'audio. Tu peux ensuite télécharger le résultat en PDF.</p>
+
+  <form id="form" novalidate>
+    <label for="url">URL de la vidéo</label>
+    <div class="field">
+      <input id="url" name="url" type="url" inputmode="url" autocomplete="off" spellcheck="false"
+             placeholder="https://www.youtube.com/watch?v=…" required>
+      <button id="go" class="primary" type="submit">Transcrire la vidéo</button>
+    </div>
+  </form>
+
+  <div class="status" id="status" aria-live="polite"></div>
+
+  <section class="result" id="result" hidden aria-labelledby="title">
+    <div class="meta">
+      <h2 id="title"></h2>
+      <p id="info"></p>
+    </div>
+    <div class="actions">
+      <button id="pdf" class="primary" type="button">Télécharger le PDF</button>
+      <button id="copy" class="secondary" type="button">Copier le texte</button>
+      <button id="reset" class="secondary" type="button">Nouvelle vidéo</button>
+    </div>
+    <div class="sheet" id="sheet" tabindex="0" aria-label="Transcription"></div>
+  </section>
+</main>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const form = $('form'), urlInput = $('url'), go = $('go'), status = $('status');
+  const result = $('result'), sheet = $('sheet');
+  const SOURCES = {
+    manual: 'Sous-titres de la vidéo',
+    auto: 'Sous-titres automatiques YouTube',
+    whisper: 'Transcription audio',
+  };
+  let current = null;
+  let slowTimer = null;
+
+  function showError(msg) {
+    status.replaceChildren();
+    const div = document.createElement('div');
+    div.className = 'error';
+    div.setAttribute('role', 'alert');
+    div.textContent = msg;
+    status.append(div);
+  }
+
+  function showProgress(text) {
+    status.replaceChildren();
+    const p = document.createElement('div');
+    p.className = 'progress';
+    p.textContent = text;
+    const bar = document.createElement('div');
+    bar.className = 'bar';
+    status.append(p, bar);
+    return p;
+  }
+
+  function duration(s) {
+    if (!s) return '';
+    const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60);
+    return h ? `${h} h ${String(m).padStart(2, '0')} min` : `${m} min`;
+  }
+
+  async function readError(res) {
+    try { return (await res.json()).error.message; } catch { return 'Une erreur est survenue. Réessaie.'; }
+  }
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const value = urlInput.value.trim();
+    if (!value) { showError("Colle l'URL d'une vidéo YouTube pour commencer."); urlInput.focus(); return; }
+
+    go.disabled = true;
+    result.hidden = true;
+    const line = showProgress('Recherche des sous-titres…');
+    slowTimer = setTimeout(() => {
+      line.textContent = "Cela prend plus de temps que prévu. Sans sous-titres, la transcription de l'audio peut durer quelques minutes.";
+    }, 8000);
+
+    try {
+      const res = await fetch('/api/transcribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: value }),
+      });
+      if (!res.ok) { showError(await readError(res)); return; }
+      current = await res.json();
+      render(current);
+      status.replaceChildren();
+    } catch {
+      showError("Impossible de joindre le serveur. Vérifie ta connexion et réessaie.");
+    } finally {
+      clearTimeout(slowTimer);
+      go.disabled = false;
+    }
+  });
+
+  function render(d) {
+    $('title').textContent = d.title;
+    const words = d.paragraphs.join(' ').split(/\s+/).filter(Boolean).length;
+    $('info').textContent = [d.channel, duration(d.duration), SOURCES[d.source], `${words.toLocaleString('fr-FR')} mots`]
+      .filter(Boolean).join(' · ');
+    sheet.replaceChildren(...d.paragraphs.map((t) => { const p = document.createElement('p'); p.textContent = t; return p; }));
+    sheet.scrollTop = 0;
+    result.hidden = false;
+    result.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
+  }
+
+  $('pdf').addEventListener('click', async (e) => {
+    if (!current) return;
+    const btn = e.currentTarget;
+    btn.disabled = true;
+    const label = btn.textContent;
+    btn.textContent = 'Création du PDF…';
+    try {
+      const res = await fetch('/api/pdf', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(current),
+      });
+      if (!res.ok) { showError(await readError(res)); return; }
+      const blob = await res.blob();
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = (res.headers.get('Content-Disposition') || '').match(/filename="([^"]+)"/)?.[1] || 'transcription.pdf';
+      document.body.append(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+    } catch {
+      showError("Le PDF n'a pas pu être créé. Réessaie.");
+    } finally {
+      btn.disabled = false;
+      btn.textContent = label;
+    }
+  });
+
+  $('copy').addEventListener('click', async (e) => {
+    if (!current) return;
+    const btn = e.currentTarget;
+    try {
+      await navigator.clipboard.writeText(current.paragraphs.join('\n\n'));
+      btn.textContent = 'Texte copié';
+    } catch {
+      btn.textContent = 'Copie impossible';
+    }
+    setTimeout(() => (btn.textContent = 'Copier le texte'), 2000);
+  });
+
+  $('reset').addEventListener('click', () => {
+    current = null;
+    result.hidden = true;
+    urlInput.value = '';
+    status.replaceChildren();
+    urlInput.focus();
+    window.scrollTo({ top: 0 });
+  });
+})();
+</script>
+</body>
+</html>
