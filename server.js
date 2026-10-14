@@ -36,7 +36,7 @@ app.post('/api/transcribe', rateLimit, async (req, res, next) => {
       throw new AppError('LIVE', "Cette vidéo est un direct en cours. Reviens quand il sera terminé.", 422);
     }
 
-    let result = await fetchCaptions(info);
+    let result = await fetchCaptions(info, url);
     if (!result) result = await transcribeAudio(url, info);
 
     res.json({

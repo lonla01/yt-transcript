@@ -4,6 +4,16 @@ import { parseYouTubeUrl } from '../lib/youtube.js';
 import { json3ToParagraphs, pickTrack } from '../lib/captions.js';
 import { splitIntoParagraphs } from '../lib/whisper.js';
 import { buildPdf, safeFilename } from '../lib/pdf.js';
+import { ytdlpArgs } from '../lib/ytdlp.js';
+
+// Proxy / cookies / options passés à yt-dlp
+process.env.YTDLP_PROXY = 'http://user:pass@proxy.example:8080';
+process.env.YTDLP_COOKIES_B64 = Buffer.from('# Netscape HTTP Cookie File\n').toString('base64');
+process.env.YTDLP_EXTRA_ARGS = '--js-runtimes node';
+const extra = ytdlpArgs();
+assert.deepEqual(extra.slice(0, 2), ['--proxy', 'http://user:pass@proxy.example:8080']);
+assert.equal(extra[2], '--cookies');
+assert.deepEqual(extra.slice(-2), ['--js-runtimes', 'node']);
 
 // URL
 assert.equal(parseYouTubeUrl('https://youtu.be/dQw4w9WgXcQ?t=10').id, 'dQw4w9WgXcQ');
@@ -25,7 +35,9 @@ assert.deepEqual(json3ToParagraphs(data), ['Bonjour à tous, bienvenue.', 'Deuxi
 // Choix de piste
 const mk = (ext = 'json3') => [{ ext, url: 'https://x/' + ext }];
 assert.equal(pickTrack({ language: 'fr', subtitles: { fr: mk() }, automatic_captions: { 'fr-orig': mk() } }).kind, 'manual');
-assert.equal(pickTrack({ language: 'fr', subtitles: {}, automatic_captions: { 'fr-orig': mk(), en: mk() } }).kind, 'auto');
+const autoPick = pickTrack({ language: 'fr', subtitles: {}, automatic_captions: { 'fr-orig': mk(), en: mk() } });
+assert.equal(autoPick.kind, 'auto');
+assert.equal(autoPick.key, 'fr-orig');
 assert.equal(pickTrack({ subtitles: {}, automatic_captions: {} }), null);
 
 // Découpage
