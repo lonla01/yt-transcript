@@ -5,6 +5,7 @@ import { json3ToParagraphs, pickTrack } from '../lib/captions.js';
 import { splitIntoParagraphs } from '../lib/whisper.js';
 import { buildPdf, safeFilename } from '../lib/pdf.js';
 import { ytdlpArgs } from '../lib/ytdlp.js';
+import { buildEpub, epubLanguage } from '../lib/epub.js';
 
 // Proxy / cookies / options passés à yt-dlp
 process.env.YTDLP_PROXY = 'http://user:pass@proxy.example:8080';
@@ -58,5 +59,18 @@ const pdf = Buffer.concat(chunks);
 assert.equal(pdf.subarray(0, 5).toString(), '%PDF-');
 assert.ok(pdf.length > 5000);
 assert.equal(safeFilename('Éléments : test / 1'), 'Elements-test-1.pdf');
+
+// EPUB
+const epub = buildEpub({
+  title: 'Éléments <test> & « accents »', channel: 'Chaîne', url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+  kind: 'manual', language: 'fr-orig', paragraphs: ['Premier paragraphe éàù.', 'Second < & > paragraphe.'],
+});
+assert.equal(epub.readUInt32LE(0), 0x04034b50);
+assert.equal(epub.subarray(30, 38).toString(), 'mimetype');
+assert.equal(epub.subarray(38, 58).toString(), 'application/epub+zip');
+assert.equal(epubLanguage('fr-orig'), 'fr');
+assert.equal(epubLanguage('pt-BR'), 'pt-BR');
+assert.equal(epubLanguage('<x>'), 'und');
+assert.equal(safeFilename('Éléments : test / 1', 'epub'), 'Elements-test-1.epub');
 
 console.log('Tous les tests passent. PDF de test :', pdf.length, 'octets');

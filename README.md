@@ -1,6 +1,6 @@
 # Transcription YouTube en PDF
 
-Application web : on colle l'URL d'une vidéo YouTube, on obtient la transcription, on la télécharge en PDF.
+Application web : on colle l'URL d'une vidéo YouTube, on obtient la transcription, on la télécharge en PDF ou en EPUB.
 
 ## Comment ça marche
 
@@ -10,6 +10,8 @@ Application web : on colle l'URL d'une vidéo YouTube, on obtient la transcripti
 3. **Repli audio** : sans sous-titres, l'audio est extrait (mono, 32 kb/s) puis envoyé à l'API
    de transcription d'OpenAI (`whisper-1` par défaut).
 4. Le PDF est généré côté serveur (PDFKit) : titre, chaîne, lien, source de la transcription, pagination.
+5. L'EPUB (EPUB 3, lisible aussi par les liseuses EPUB 2) est généré côté serveur sans dépendance : mêmes
+   métadonnées, langue de la transcription, texte redimensionnable sur liseuse.
 
 ## Lancer en local
 
@@ -20,7 +22,7 @@ npm install
 cp .env.example .env        # puis renseigne OPENAI_API_KEY pour le repli audio
 export $(grep -v '^#' .env | xargs)
 npm start                   # http://localhost:3000
-npm test                    # tests unitaires (URL, sous-titres, PDF)
+npm test                    # tests unitaires (URL, sous-titres, PDF, EPUB)
 ```
 
 Sans `OPENAI_API_KEY`, les vidéos **avec** sous-titres fonctionnent ; les autres renvoient un message clair.

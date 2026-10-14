@@ -6,6 +6,7 @@ import { parseYouTubeUrl } from './lib/youtube.js';
 import { getVideoInfo, fetchCaptions } from './lib/captions.js';
 import { transcribeAudio } from './lib/whisper.js';
 import { buildPdf, safeFilename } from './lib/pdf.js';
+import { buildEpub } from './lib/epub.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -54,21 +55,40 @@ app.post('/api/transcribe', rateLimit, async (req, res, next) => {
   }
 });
 
+/** Valide et nettoie le corps envoyé par le client pour l'export (PDF, EPUB). */
+function exportInput(body) {
+  const { title, channel, url, source, language, paragraphs } = body || {};
+  if (!Array.isArray(paragraphs) || !paragraphs.length || !paragraphs.every((p) => typeof p === 'string')) {
+    throw new AppError('BAD_EXPORT_INPUT', "Il n'y a pas de transcription à exporter.");
+  }
+  return {
+    title: String(title || '').slice(0, 300),
+    channel: String(channel || '').slice(0, 200),
+    url: typeof url === 'string' && /^https:\/\/www\.youtube\.com\/watch\?v=[\w-]{11}$/.test(url) ? url : '',
+    kind: source,
+    language: typeof language === 'string' ? language.slice(0, 35) : '',
+    paragraphs,
+  };
+}
+
 app.post('/api/pdf', (req, res, next) => {
   try {
-    const { title, channel, url, source, paragraphs } = req.body || {};
-    if (!Array.isArray(paragraphs) || !paragraphs.length || !paragraphs.every((p) => typeof p === 'string')) {
-      throw new AppError('BAD_PDF_INPUT', "Il n'y a pas de transcription à convertir en PDF.");
-    }
+    const input = exportInput(req.body);
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="${safeFilename(title)}"`);
-    buildPdf(res, {
-      title: String(title || '').slice(0, 300),
-      channel: String(channel || '').slice(0, 200),
-      url: typeof url === 'string' && /^https:\/\/www\.youtube\.com\/watch\?v=[\w-]{11}$/.test(url) ? url : '',
-      kind: source,
-      paragraphs,
-    });
+    res.setHeader('Content-Disposition', `attachment; filename="${safeFilename(input.title)}"`);
+    buildPdf(res, input);
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.post('/api/epub', (req, res, next) => {
+  try {
+    const input = exportInput(req.body);
+    const epub = buildEpub(input);
+    res.setHeader('Content-Type', 'application/epub+zip');
+    res.setHeader('Content-Disposition', `attachment; filename="${safeFilename(input.title, 'epub')}"`);
+    res.send(epub);
   } catch (err) {
     next(err);
   }
